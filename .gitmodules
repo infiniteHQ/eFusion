@@ -1,0 +1,3 @@
+[submodule "lib/vortex"]
+	path = lib/vortex
+	url = https://github.com/infiniteHQ/Vortex

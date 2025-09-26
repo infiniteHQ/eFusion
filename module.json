@@ -1,0 +1,20 @@
+{
+    "type": "em",
+    "group": "System Dev",
+    "name": "infinitehq.efusion.core",
+    "proper_name": "eFusion Core",
+    "auto_exec": true,
+    "version": "1.0.0",
+    "author": "Infinite",
+    "contributors": [
+        "Diego E. Moreno <d@infinite.si>"
+    ],
+    "deps": [
+    ],
+    "compatibility": [
+        "1.0"
+    ],
+    "path": "./build/libmodule.so",
+    "picture": "./assets/logo.png",
+    "description": ""
+}
