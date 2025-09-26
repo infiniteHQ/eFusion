@@ -6,38 +6,56 @@
 #ifndef SAMPLE_MODULE_HPP
 #define SAMPLE_MODULE_HPP
 
-namespace SampleCppModule {
+namespace EmbeddedFusion {
 struct Context {
   std::shared_ptr<ModuleInterface> m_interface;
   std::vector<std::shared_ptr<ModuleUI::TextEditorAppWindow>>
       m_text_editor_instances;
 };
-} // namespace SampleCppModule
+} // namespace EmbeddedFusion
 
-#ifndef SAMPLE_MODULE_API
-#define SAMPLE_MODULE_API
+#ifndef EMBEDDED_FUSION_API
+#define EMBEDDED_FUSION_API
 #endif
 
-#ifndef CSampleModule
-extern SAMPLE_MODULE_API SampleCppModule::Context
-    *CSampleModule; // Current implicit context pointer
+#ifndef CEmbeddedFusion
+extern EMBEDDED_FUSION_API EmbeddedFusion::Context
+    *CEmbeddedFusion; // Current implicit context pointer
 #endif
 
 // The code API of the module.
-namespace SampleCppModule {
-SAMPLE_MODULE_API void CreateContext();
-SAMPLE_MODULE_API void DestroyContext();
-SAMPLE_MODULE_API void HelloWorld();
-SAMPLE_MODULE_API void FunctionWithArg(ArgumentValues &val);
-SAMPLE_MODULE_API void FunctionWithRet(ReturnValues &ret);
-SAMPLE_MODULE_API void FunctionWithArgRet(ArgumentValues &val,
-                                          ReturnValues &ret);
-SAMPLE_MODULE_API void OutputHandleHello();
-SAMPLE_MODULE_API void InputHello();
-SAMPLE_MODULE_API std::string GetPath(const std::string &path);
+namespace EmbeddedFusion {
+// Main
+EMBEDDED_FUSION_API void CreateContext();
+EMBEDDED_FUSION_API void DestroyContext();
 
-SAMPLE_MODULE_API void StartTextEditorInstance(const std::string &path);
-SAMPLE_MODULE_API bool IsValidFile(const std::string &path);
-} // namespace SampleCppModule
+// Input/Output API
+EMBEDDED_FUSION_API void I_OpenMainSketch();
+EMBEDDED_FUSION_API void I_OpenSketchFunction();
+EMBEDDED_FUSION_API void I_OpenSketchEvent();
+
+// Content browser
+EMBEDDED_FUSION_API void IsMainSketch();
+EMBEDDED_FUSION_API void CreateMainSketch();
+
+EMBEDDED_FUSION_API void IsSketchFunction();
+EMBEDDED_FUSION_API void CreateSketchFunction();
+
+// Project settings
+EMBEDDED_FUSION_API void AddModuleSettingsToProjectSettings();
+EMBEDDED_FUSION_API void GetModuleSettingsToProjectSettings();
+
+// UI
+EMBEDDED_FUSION_API void SpawnMainSketchEditor();
+EMBEDDED_FUSION_API void SpawnSketchFunctionEditor();
+
+EMBEDDED_FUSION_API std::string GetPath(const std::string &path);
+} // namespace EmbeddedFusion
+
+// The code of the module.
+namespace EmbeddedFusion {
+// Input/Output API
+EMBEDDED_FUSION_API void TranspileSketchToCPP(const std::string path);
+} // namespace EmbeddedFusion
 
 #endif // SAMPLE_MODULE_HPP

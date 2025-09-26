@@ -1,42 +1,42 @@
 #include "./src/module.hpp"
 #include "./ui/main/ui.hpp"
 
-#ifndef CSampleModule
-SampleCppModule::Context *CSampleModule = NULL;
+#ifndef CEmbeddedFusion
+EmbeddedFusion::Context *CEmbeddedFusion = NULL;
 #endif
 
 class Module : public ModuleInterface {
 public:
   void execute() override {
     // Create the context pointer of this module
-    SampleCppModule::CreateContext();
+    EmbeddedFusion::CreateContext();
 
     // Get the interface pointer (for GUI launcher, from other modules)
-    CSampleModule->m_interface =
+    CEmbeddedFusion->m_interface =
         ModuleInterface::GetEditorModuleByName(this->m_name);
 
     // Adding functions
-    this->AddFunction(SampleCppModule::HelloWorld, "HelloWorld");
-    this->AddFunction(SampleCppModule::FunctionWithArg, "Arg");
-    this->AddFunction(SampleCppModule::FunctionWithArgRet, "ArgRet");
-    this->AddFunction(SampleCppModule::FunctionWithRet, "Ret");
+    this->AddFunction(EmbeddedFusion::HelloWorld, "HelloWorld");
+    this->AddFunction(EmbeddedFusion::FunctionWithArg, "Arg");
+    this->AddFunction(EmbeddedFusion::FunctionWithArgRet, "ArgRet");
+    this->AddFunction(EmbeddedFusion::FunctionWithRet, "Ret");
 
-    this->AddOutputEvent(SampleCppModule::OutputHandleHello,
+    this->AddOutputEvent(EmbeddedFusion::OutputHandleHello,
                          "OutputHandleHello");
-    this->AddInputEvent(SampleCppModule::InputHello, "InputHello");
+    this->AddInputEvent(EmbeddedFusion::InputHello, "InputHello");
 
     this->AddContentBrowserItemHandler(ItemHandlerInterface(
-        "file_txt", SampleCppModule::StartTextEditorInstance, "Edit",
+        "file_txt", EmbeddedFusion::StartTextEditorInstance, "Edit",
         "Edit this txt file",
-        SampleCppModule::GetPath("resources/icons/edit.png")));
+        EmbeddedFusion::GetPath("resources/icons/edit.png")));
 
     this->AddContentBrowserItemHandler(ItemHandlerInterface(
-        "text_edit:superfile", SampleCppModule::StartTextEditorInstance,
+        "text_edit:superfile", EmbeddedFusion::StartTextEditorInstance,
         "Super Edit", "Edit this txt file",
-        SampleCppModule::GetPath("resources/icons/edit.png")));
+        EmbeddedFusion::GetPath("resources/icons/edit.png")));
 
     this->AddContentBrowserItemIdentifier(ItemIdentifierInterface(
-        SampleCppModule::IsValidFile, "text_edit:superfile", "Super file",
+        EmbeddedFusion::IsValidFile, "text_edit:superfile", "Super file",
         "#553333"));
 
     // SetContentBrowserSaveAllCallback();
@@ -81,7 +81,7 @@ public:
     this->ResetModule();
 
     // Clear windows
-    for (auto i : CSampleModule->m_text_editor_instances) {
+    for (auto i : CEmbeddedFusion->m_text_editor_instances) {
       CherryApp.DeleteAppWindow(i->GetAppWindow());
     }
 
@@ -91,8 +91,8 @@ public:
 };
 
 #ifdef _WIN32
-extern "C" __declspec(dllexport) ModuleInterface* create_em() {
-    return new Module();
+extern "C" __declspec(dllexport) ModuleInterface *create_em() {
+  return new Module();
 }
 #else
 extern "C" ModuleInterface *create_em() { return new Module(); }
