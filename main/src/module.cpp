@@ -7,32 +7,54 @@ void EmbeddedFusion::CreateContext() {
 
 void EmbeddedFusion::DestroyContext() { VX_FREE(CEmbeddedFusion); }
 
-void EmbeddedFusion::HelloWorld() {
-  std::cout << "Hello Vortex World !!" << std::endl;
+std::string EmbeddedFusion::GetPath(const std::string &path) {
+  return CEmbeddedFusion->m_interface->GetBinaryPath() + "/" + path;
 }
 
-void EmbeddedFusion::OutputHandleHello() {
-  std::cout << "Handling the HEllow output event...." << std::endl;
-}
+bool EmbeddedFusion::IsMainSketch(const std::string &path) {
+  fs::path base(path);
 
-bool EmbeddedFusion::IsValidFile(const std::string &path) {
-  namespace fs = std::filesystem;
-
-  if (!fs::is_directory(path)) {
+  if (!fs::is_directory(base / "src_nodal"))
     return false;
-  }
+  if (!fs::is_directory(base / "src"))
+    return false;
+  if (!fs::is_directory(base / "src/setup"))
+    return false;
+  if (!fs::is_directory(base / "src/main"))
+    return false;
+  if (!fs::is_directory(base / "configs"))
+    return false;
 
-  for (const auto &entry : fs::directory_iterator(path)) {
-    if (entry.is_regular_file() &&
-        entry.path().filename() == "SampleConfig.txt") {
-      return true;
-    }
-  }
+  if (!fs::is_regular_file(base / "src/setup/pin_setup.json"))
+    return false;
+  if (!fs::is_regular_file(base / "src/main/main_sketch.json"))
+    return false;
+  if (!fs::is_regular_file(base / "main_sketch.json"))
+    return false;
 
-  return false;
+  return true;
 }
 
-void EmbeddedFusion::StartTextEditorInstance(const std::string &path) {
+void EmbeddedFusion::CreateMainSketch(const std::string &path) {
+  fs::path base(path);
+  fs::path sketchRoot = base / "New Main Sketch";
+
+  fs::create_directories(sketchRoot / "src_nodal");
+  fs::create_directories(sketchRoot / "src/setup");
+  fs::create_directories(sketchRoot / "src/main");
+  fs::create_directories(sketchRoot / "configs");
+
+  auto createFile = [](const fs::path &p) {
+    std::ofstream ofs(p.string());
+    ofs << "{}";
+  };
+
+  createFile(sketchRoot / "src/setup/pin_setup.json");
+  createFile(sketchRoot / "src/main/main_sketch.json");
+  createFile(sketchRoot / "main_sketch.json");
+}
+
+void EmbeddedFusion::OpenMainSketch(const std::string &path) {
   std::string filename = fs::path(path).filename().string();
 
   const size_t maxLen = 24;
@@ -42,35 +64,8 @@ void EmbeddedFusion::StartTextEditorInstance(const std::string &path) {
 
   std::string window_name =
       filename + "####" +
-      std::to_string(CEmbeddedFusion->m_text_editor_instances.size());
-
-  auto inst = ModuleUI::TextEditorAppWindow::Create(path, window_name);
-  Cherry::AddAppWindow(inst->GetAppWindow());
-  CEmbeddedFusion->m_text_editor_instances.push_back(inst);
-}
-
-void EmbeddedFusion::InputHello() {
-  std::cout << "Input event hello triggered !!!" << std::endl;
-}
-
-void EmbeddedFusion::FunctionWithArg(ArgumentValues &arg) {
-  // std::string name = val.GetJsonValue()["name"].get<std::string>();
-  std::cout << "print the name given in aguments"
-            << arg.GetJsonValue()["name"].get<std::string>() << std::endl;
-}
-
-std::string EmbeddedFusion::GetPath(const std::string &path) {
-  return CEmbeddedFusion->m_interface->GetPath() + "/" + path;
-}
-
-void EmbeddedFusion::FunctionWithRet(ReturnValues &ret) {
-  // Set the return value (time for this example)
-  ret.SetJsonValue(nlohmann::json::parse("{\"time\":\"current\"}"));
-}
-void EmbeddedFusion::FunctionWithArgRet(ArgumentValues &arg,
-                                        ReturnValues &ret) {
-  // std::string name = val.GetJsonValue()["name"].get<std::string>();
-  std::string name = arg.GetJsonValue()["name"].get<std::string>();
-  ret.SetJsonValue(
-      nlohmann::json::parse("{\"time\":\"current_name_" + name + "\"}"));
+      std::to_string(CEmbeddedFusion->m_main_sketch_instances.size());
+  std::shared_ptr<ModuleUI::MainSketchAppWindow> big_win =
+      ModuleUI::MainSketchAppWindow::Create(path, window_name);
+  Cherry::AddAppWindow(big_win->GetAppWindow());
 }

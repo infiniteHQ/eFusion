@@ -1,6 +1,8 @@
 #pragma once
 #include "../../../../lib/vortex/main/include/vortex.h"
 #include "../../../../lib/vortex/main/include/vortex_internals.h"
+#include "./child/my_sketch/my_sketch.hpp"
+#include "./child/viewport/viewport.hpp"
 
 #ifndef MAIN_SKETCH_APP_WINDOW_HPP
 #define MAIN_SKETCH_APP_WINDOW_HPP
@@ -34,6 +36,7 @@ private:
   std::shared_ptr<Cherry::AppWindow> m_AppWindow;
   ComponentsPool m_ComponentPool;
 };
+
 }; // namespace ModuleUI
 
 #endif // LOGUTILITY_H
