@@ -676,11 +676,9 @@ public:
       m_Graph.SetGraphFile(graphFile);
       bool ok = m_Graph.PopulateGraphFromJsonFile();
       if (!ok) {
-        // If no file, create an empty graph file
         std::cerr << "FetchMainNodeGraph: unable to load " << graphFile
                   << " (file missing or invalid). Creating empty graph."
                   << std::endl;
-        // Create empty nodes/connections json
         json j;
         j["nodes"] = json::array();
         j["connections"] = json::array();
@@ -689,36 +687,25 @@ public:
         if (out.is_open()) {
           out << j.dump(4);
           out.close();
-          // try reloading
           m_Graph.PopulateGraphFromJsonFile();
         }
         return;
       }
 
-      // Ensure that for each instanciated node, there's a schema in the
-      // context.
       for (const auto &ni : m_Graph.m_InstanciatedNodes) {
         std::string typeId = ni.TypeID;
-        // Check whether schema exists via GetSchema
         auto schema = m_NodeCtx.GetSchema(typeId);
         if (schema == nullptr) {
-          // create a fallback schema for unknown nodes
           std::string fallbackId = std::string("fallback_") + typeId;
           m_NodeCtx.CreateSchema(fallbackId);
           auto fb = m_NodeCtx.GetSchema(fallbackId);
           if (fb) {
-            // Add a generic exec-in / exec-out plus a data passthrough
             fb->AddInputPin("InExec", "exec");
             fb->AddOutputPin("OutExec", "exec");
 
-            // Add a generic "value" input and output so user can connect things
-            // visually
             fb->AddInputPin("InValue", "variant");
             fb->AddOutputPin("OutValue", "variant");
           }
-          // Optionally remap node's TypeID to fallback for editing
-          // but keep original TypeID in stored graph so transpiler can handle
-          // it later.
         }
       }
 

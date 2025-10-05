@@ -411,7 +411,7 @@ void ViewportMainSketchAppWindow::DrawNodeExplorer() {
     ImGui::Separator();
 
     for (auto &input : node->Inputs) {
-      std::string pinStr = ed::ToString(input.ID);
+      std::string pinStr = input.Name;
       auto linked =
           m_Graph.GetAllNodesLinkedToInputInstanceID(node->InstanceID, pinStr);
 
@@ -440,7 +440,7 @@ void ViewportMainSketchAppWindow::DrawNodeExplorer() {
     ImGui::Separator();
 
     for (auto &output : node->Outputs) {
-      std::string pinStr = ed::ToString(output.ID);
+      std::string pinStr = output.Name;
       auto linked =
           m_Graph.GetAllNodesLinkedToOutputInstanceID(node->InstanceID, pinStr);
 
