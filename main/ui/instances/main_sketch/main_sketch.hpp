@@ -32,9 +32,19 @@ private:
   VxContext *ctx;
   bool opened;
 
+  std::vector<std::function<void()>> m_SaveCallbacks;
+  std::vector<std::function<void()>> m_RefreshCallbacks;
+
+  std::shared_ptr<Cherry::WindowDragDropState> drag_dropstate;
+  // Instances
+  std::shared_ptr<ModuleUI::ViewportMainSketchAppWindow> m_Viewport;
+  std::shared_ptr<ModuleUI::MySketchMainSketchAppWindow> m_MySketch;
+
   // Cherry
   std::shared_ptr<Cherry::AppWindow> m_AppWindow;
   ComponentsPool m_ComponentPool;
+
+  std::string m_Path;
 };
 
 }; // namespace ModuleUI

@@ -1,10 +1,12 @@
-Main Sketch (Ard) :
-[ITEM]/src_nodal
+Main Sketch :
 [ITEM]/src
-[ITEM] ---/setup 
-[ITEM] ---/---/pin_setup.json -> Nodal
-[ITEM] ---/main 
-[ITEM] ---/---/main_sketch.json -> Nodal
+[ITEM]/src/setup 
+[ITEM]/src/setup/pin_setup.json -> Nodal
+[ITEM]/src/main 
+[ITEM]/src/main/main_sketch.json -> Nodal
+[ITEM]/functions/[all functions]
+[ITEM]/primitives/[all primitives]
+[ITEM]/types/[all primitives]
 [ITEM]/configs
 [ITEM]/main_sketch.json
 

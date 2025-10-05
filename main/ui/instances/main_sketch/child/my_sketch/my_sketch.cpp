@@ -13,11 +13,6 @@ MySketchMainSketchAppWindow::MySketchMainSketchAppWindow(
   m_AppWindow = std::make_shared<Cherry::AppWindow>(name, name);
   m_AppWindow->SetIcon(
       EmbeddedFusion::GetPath("/resources/icons/viewport.png"));
-  m_AppWindow->SetLeftMenubarCallback([this]() { RenderMenubar(); });
-  m_AppWindow->SetRightMenubarCallback([this]() { RenderRightMenubar(); });
-  m_AppWindow->SetDefaultBehavior(
-      Cherry::DefaultAppWindowBehaviors::DefaultDocking, "left");
-  std::shared_ptr<Cherry::AppWindow> win = m_AppWindow;
 
   this->ctx = VortexMaker::GetCurrentContext();
 }
@@ -45,8 +40,6 @@ void MySketchMainSketchAppWindow::SetupRenderCallback() {
   });
 }
 
-void MySketchMainSketchAppWindow::RenderMenubar() {}
-void MySketchMainSketchAppWindow::RenderRightMenubar() {}
 void MySketchMainSketchAppWindow::Render() {
   CherryKit::TextSimple("Hello world from my sketch");
 }

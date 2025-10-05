@@ -14,21 +14,6 @@ std::string EmbeddedFusion::GetPath(const std::string &path) {
 bool EmbeddedFusion::IsMainSketch(const std::string &path) {
   fs::path base(path);
 
-  if (!fs::is_directory(base / "src_nodal"))
-    return false;
-  if (!fs::is_directory(base / "src"))
-    return false;
-  if (!fs::is_directory(base / "src/setup"))
-    return false;
-  if (!fs::is_directory(base / "src/main"))
-    return false;
-  if (!fs::is_directory(base / "configs"))
-    return false;
-
-  if (!fs::is_regular_file(base / "src/setup/pin_setup.json"))
-    return false;
-  if (!fs::is_regular_file(base / "src/main/main_sketch.json"))
-    return false;
   if (!fs::is_regular_file(base / "main_sketch.json"))
     return false;
 

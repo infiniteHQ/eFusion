@@ -18,19 +18,19 @@ MainSketchAppWindow::MainSketchAppWindow(const std::string &path,
   m_AppWindow->SetSaveMode(true);
   m_AppWindow->SetDockingMode(true);
 
-  // Nodal Viewport
-  std::shared_ptr<ModuleUI::ViewportMainSketchAppWindow> viewport =
-      ModuleUI::ViewportMainSketchAppWindow::Create(
-          path, "Viewport ####viewport" + path);
-  viewport->GetAppWindow()->SetParent(m_AppWindow);
-  Cherry::AddAppWindow(viewport->GetAppWindow());
+  m_Path = path;
 
   // Nodal Viewport
-  std::shared_ptr<ModuleUI::MySketchMainSketchAppWindow> my_sketch =
-      ModuleUI::MySketchMainSketchAppWindow::Create(
-          path, "My sketch ####my_sketch" + path);
-  my_sketch->GetAppWindow()->SetParent(m_AppWindow);
-  Cherry::AddAppWindow(my_sketch->GetAppWindow());
+  m_Viewport = ModuleUI::ViewportMainSketchAppWindow::Create(
+      path, "Viewport ####viewport" + path);
+  m_Viewport->GetAppWindow()->SetParent(m_AppWindow);
+  Cherry::AddAppWindow(m_Viewport->GetAppWindow());
+
+  // Nodal Viewport
+  m_MySketch = ModuleUI::MySketchMainSketchAppWindow::Create(
+      path, "My sketch ####m_MySketch" + path);
+  m_MySketch->GetAppWindow()->SetParent(m_AppWindow);
+  Cherry::AddAppWindow(m_MySketch->GetAppWindow());
 
   this->ctx = VortexMaker::GetCurrentContext();
 }
@@ -56,8 +56,48 @@ void MainSketchAppWindow::SetupRenderCallback() {
   });
 }
 
-void MainSketchAppWindow::RenderMenubar() {}
+void MainSketchAppWindow::RenderMenubar() {
+
+  static bool tt = true;
+  static bool first_Frame = true;
+  if (tt) {
+    if (first_Frame) {
+      first_Frame = false;
+    } else {
+      drag_dropstate = std::make_shared<Cherry::WindowDragDropState>();
+      CherryApp.SetCurrentDragDropState(this->drag_dropstate);
+      CherryApp.SetCurrentDragDropStateAppWindow(
+          m_Viewport->GetAppWindow()->m_IdName);
+      CherryApp.SetCurrentDragDropStateWindow(
+          Cherry::GetCurrentRenderedWindow()->GetName());
+      CherryApp.SetCurrentDragDropStateAppWindowHost(
+          m_MySketch->GetAppWindow()->m_IdName);
+      CherryApp.SetCurrentDragDropStateDraggingPlace(
+          Cherry::DockEmplacement::DockLeft);
+
+      CherryApp.PushRedockEvent(CherryApp.GetCurrentDragDropState());
+      tt = false;
+    }
+  }
+
+  CherryGUI::SetCursorPosX(CherryGUI::GetCursorPosX() + 3.0f);
+  CherryNextComponent.SetProperty("padding_y", "6.0f");
+  CherryNextComponent.SetProperty("padding_x", "10.0f");
+  if (CherryKit::ButtonImageText(
+          "Save", GetPath("resources/imgs/icons/misc/icon_add.png"))
+          .GetDataAs<bool>("isClicked")) {
+    m_Viewport->Save();
+  }
+  CherryGUI::SetCursorPosX(CherryGUI::GetCursorPosX() + 3.0f);
+  CherryNextComponent.SetProperty("padding_y", "6.0f");
+  CherryNextComponent.SetProperty("padding_x", "10.0f");
+  if (CherryKit::ButtonImageText(
+          "Refresh", GetPath("resources/imgs/icons/misc/icon_add.png"))
+          .GetDataAs<bool>("isClicked")) {
+    m_Viewport->Refresh();
+    g_NeedRefresh = true;
+  }
+}
 void MainSketchAppWindow::RenderRightMenubar() {}
 void MainSketchAppWindow::Render() {}
-
 }; // namespace ModuleUI
