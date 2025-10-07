@@ -97,6 +97,14 @@ void MainSketchAppWindow::RenderMenubar() {
     m_Viewport->Refresh();
     g_NeedRefresh = true;
   }
+  CherryGUI::SetCursorPosX(CherryGUI::GetCursorPosX() + 3.0f);
+  CherryNextComponent.SetProperty("padding_y", "6.0f");
+  CherryNextComponent.SetProperty("padding_x", "10.0f");
+  if (CherryKit::ButtonImageText(
+          "Transpilation", GetPath("resources/imgs/icons/misc/icon_add.png"))
+          .GetDataAs<bool>("isClicked")) {
+    m_Viewport->Transpilation();
+  }
 }
 void MainSketchAppWindow::RenderRightMenubar() {}
 void MainSketchAppWindow::Render() {}

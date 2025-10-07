@@ -34,6 +34,9 @@ ViewportMainSketchAppWindow::ViewportMainSketchAppWindow(
   FetchTypes();
   FetchPrimitives();
   FetchFunctions();
+
+  RegisterBoolVarNode();
+
   FetchMainNodeGraph();
 
   PopulateMinimum(); // inject built-ins (types + primitives)
@@ -79,6 +82,10 @@ void ViewportMainSketchAppWindow::PopulateMinimum() {
 
   ensureType("bool", "Boolean", "Boolean true/false", "#fc0339", "primitive",
              "bool");
+
+  ensureType("bool_input", "Boolean", "Boolean true/false", "#fc0339",
+             "primitive",
+             "bool"); // bool == fallback
 
   ensureType("variant", "Variant", "Generic fallback type", "#AAAAAA", "flow",
              "flow");
@@ -139,11 +146,11 @@ void ViewportMainSketchAppWindow::PopulateMinimum() {
             }
 
             for (auto &p : s.inputs) {
-              schema->AddInputPin(p.name, p.type);
+              schema->AddInputPin(p.id, p.type);
             }
 
             for (auto &p : s.outputs) {
-              schema->AddOutputPin(p.name, p.type);
+              schema->AddOutputPin(p.id, p.type);
             }
 
             if (!name.empty()) {
@@ -219,6 +226,11 @@ void ViewportMainSketchAppWindow::PopulateMinimum() {
                   {{"int1", "", "int", nullptr}}, "#616363", "def", "def",
                   "#CCCCCC", "#CCCCCC", "", "", "", "Convert float to int",
                   EmbeddedFusion::GetPath("resources/icons/if.png"));
+
+  ensurePrimitive("test", "", "",
+                  {{"bool_input1", "bool_input1", "bool_input", nullptr}},
+                  {{"bool1", "", "bool", nullptr}}, "#616363", "def", "def",
+                  "#CCCCCC", "#CCCCCC", "", "", "", "Simple bool var");
 }
 
 void ViewportMainSketchAppWindow::SpawnMinimal() {
@@ -277,8 +289,8 @@ void ViewportMainSketchAppWindow::Refresh() {
 }
 
 void ViewportMainSketchAppWindow::Save() {
-  m_NodeEngine.SaveNodeGraph();
 
+  m_NodeEngine.SaveNodeGraph();
   SaveTypes();
   SavePrimitives();
   SaveFunctions();
@@ -311,45 +323,35 @@ void ViewportMainSketchAppWindow::SetupRenderCallback() {
 void ViewportMainSketchAppWindow::SpawnNode(const std::string &schema_id,
                                             float x, float y,
                                             const std::string &link) {
+  std::cout << "2a" << std::endl;
   Cherry::NodeSystem::NodeInstance ni;
   ni.TypeID = schema_id;
   ni.InstanceID =
       schema_id + "_" + std::to_string(m_Graph.m_InstanciatedNodes.size() + 1);
   ni.Position = {x, y};
-  ni.Size = {120.0f, 40.0f};
+  ni.Size = {120.f, 40.f};
 
+  ni.Datas = "{}";
+  std::cout << "2112" << std::endl;
+
+  // ⚡ Ajoute le node à la graph
   m_Graph.AddNodeInstance(ni);
 
+  // Reconstruire et rafraîchir
+  std::cout << "2b1" << std::endl;
   m_NodeEngine.BuildNodes();
+  std::cout << "2b2" << std::endl;
   m_NodeEngine.RefreshNodeGraph();
+  std::cout << "2b3" << std::endl;
   m_NodeEngine.RefreshNodeGraphLinks();
+  std::cout << "2b4" << std::endl;
 
+  // Positionner le node
   Node *nodePtr = m_NodeEngine.FindNodeByInstanceID(ni.InstanceID);
   if (nodePtr) {
     ed::SetNodePosition(nodePtr->ID, ImVec2(x, y));
-
-    /*if (!link.empty()) {
-      Pin *startPin =
-          m_NodeEngine.FindPinByID(link);
-      if (startPin) {
-        auto &pins = startPin->Kind == PinKind::Input ? nodePtr->Outputs
-                                                      : nodePtr->Inputs;
-        for (auto &pin : pins) {
-          if (m_NodeEngine.CanCreateLink(startPin, &pin)) {
-            Pin *endPin = &pin;
-            if (startPin->Kind == PinKind::Input)
-              std::swap(startPin, endPin);
-
-            m_NodeEngine.m_Links.emplace_back(
-                Link(m_NodeEngine.GetNextId(), startPin->ID, endPin->ID));
-            m_NodeEngine.m_Links.back().Color =
-                Cherry::HexToImColor(startPin->Format.m_Color);
-            break;
-          }
-        }
-      }
-    }*/
   }
+  std::cout << "2b" << std::endl;
 }
 
 void ViewportMainSketchAppWindow::Render() {
@@ -376,6 +378,202 @@ void ViewportMainSketchAppWindow::Render() {
   if (first) {
     SpawnMinimal();
     first = false;
+  }
+}
+
+void ViewportMainSketchAppWindow::Transpilation() {
+  namespace fs = std::filesystem;
+
+  try {
+    // 1) prepare paths
+    fs::path buildDir = fs::path(m_Path) / "transpilation" / "build";
+    fs::create_directories(buildDir);
+
+    fs::path mainCpp = buildDir / "main.cpp";
+    std::ofstream out(mainCpp);
+    if (!out.is_open()) {
+      std::cerr << "Transpilation: failed to open " << mainCpp << "\n";
+      return;
+    }
+
+    // 2) header includes
+    out << "// Auto-generated transpilation\n";
+    out << "#include <Arduino.h>\n";
+    out << "#include <string>\n";
+    out << "\n";
+
+    // 3) collect all node instances
+    auto &nodes = m_Graph.m_InstanciatedNodes;
+
+    // 4) collect variable declarations for data pins
+    std::set<std::string> declaredVars;           // var names
+    std::map<std::string, std::string> varToType; // var -> cpp type
+
+    // Helper lambda to register a pin variable
+    auto registerPinVar = [&](const Cherry::NodeSystem::NodeInstance &ni,
+                              const std::string &pinName,
+                              const std::string &pinTypeId) {
+      if (pinTypeId == "exec")
+        return; // no variable for exec
+      std::string var = VarNameForPin(ni, pinName);
+      std::string cppType = GetCppTypeForPinType(pinTypeId);
+      declaredVars.insert(var);
+      varToType[var] = cppType;
+    };
+
+    // Pre-pass: for each node instance, look up its schema in g_SchemasCache
+    // and register variables for inputs/outputs non-exec
+    for (const auto &ni : nodes) {
+      auto maybeSchema = FindSchemaInfoById(ni.TypeID);
+      if (!maybeSchema) {
+        // unknown schema: skip but keep remark
+        continue;
+      }
+      const SchemaInfo &schema = *maybeSchema;
+      // inputs
+      for (const auto &p : schema.inputs) {
+        registerPinVar(ni, p.id.empty() ? p.name : p.id, p.type);
+      }
+      // outputs
+      for (const auto &p : schema.outputs) {
+        registerPinVar(ni, p.id.empty() ? p.name : p.id, p.type);
+      }
+    }
+
+    // 5) write global declarations
+    out << "// Global pin variables (automatically declared)\n";
+    for (const auto &v : declaredVars) {
+      auto it = varToType.find(v);
+      std::string cppType = (it != varToType.end()) ? it->second : "auto";
+      out << cppType << " " << v << ";\n";
+    }
+    out << "\n";
+
+    // 6) forward prototypes for node functions
+    for (const auto &ni : nodes) {
+      std::string inst = SanitizeIdentifier(ni.InstanceID);
+      out << "void node_" << inst << "();\n";
+    }
+    out << "\n";
+
+    // 7) Build bodies for each node instance
+    std::ostringstream bodies; // accumulate bodies before output
+    for (const auto &ni : nodes) {
+      auto maybeSchema = FindSchemaInfoById(ni.TypeID);
+      if (!maybeSchema) {
+        // fallback: stub
+        std::string inst = SanitizeIdentifier(ni.InstanceID);
+        bodies << "// Stub for unknown schema: " << ni.TypeID << " ("
+               << ni.InstanceID << ")\n";
+        bodies << "void node_" << inst << "() {\n";
+        bodies << "    // Unknown node type '" << ni.TypeID
+               << "'. Implement or provide skeleton.\n";
+        bodies << "}\n\n";
+        continue;
+      }
+
+      const SchemaInfo &schema = *maybeSchema;
+
+      // special-case branch (we generate inline)
+      if (schema.id == "branch") {
+        PopulatePrimitiveBranch(schema, ni, bodies, declaredVars);
+        continue;
+      }
+
+      // Otherwise try to find an existing skeleton file named <id>.cpp
+      // in primitives/ or functions/ (we search both)
+      std::vector<fs::path> candidateDirs = {
+          fs::path(m_Path) / "primitives" / schema.id,
+          fs::path(m_Path) / "functions" / schema.id,
+          fs::path(m_Path) / "types" / schema.id,
+      };
+
+      bool usedExternalSkeleton = false;
+      for (auto &d : candidateDirs) {
+        fs::path skeleton = d / (schema.id + ".cpp");
+        if (fs::exists(skeleton)) {
+          // include skeleton contents as a helper function primitive_<id>
+          std::ifstream sk(skeleton);
+          if (sk.is_open()) {
+            std::string content((std::istreambuf_iterator<char>(sk)),
+                                std::istreambuf_iterator<char>());
+            // Option A: insert the skeleton content directly into bodies.
+            bodies << "// Included skeleton for primitive " << schema.id
+                   << " (from " << skeleton << ")\n";
+            bodies << content << "\n\n";
+            usedExternalSkeleton = true;
+            break;
+          }
+        }
+      }
+
+      // If external skeleton present, create a wrapper node function that calls
+      // it
+      std::string inst = SanitizeIdentifier(ni.InstanceID);
+      if (usedExternalSkeleton) {
+        bodies << "void node_" << inst << "() {\n";
+        bodies << "    // wrapper for primitive " << schema.id << "\n";
+        bodies << "    primitive_" << schema.id << "();\n";
+        bodies << "}\n\n";
+        continue;
+      }
+
+      // Otherwise produce a minimal stub that calls a primitive_<id>()
+      // placeholder
+      bodies << "// Primitive " << schema.id
+             << " (auto-generated stub for instance " << ni.InstanceID << ")\n";
+      bodies << "void primitive_" << schema.id << "() {\n";
+      bodies << "    // TODO: implement primitive '" << schema.id
+             << "' or provide a skeleton file in primitives/" << schema.id
+             << "/" << schema.id << ".cpp\n";
+      bodies << "}\n\n";
+
+      bodies << "void node_" << inst << "() {\n";
+      bodies << "    // calls primitive for " << schema.id << "\n";
+      bodies << "    primitive_" << schema.id << "();\n";
+      bodies << "}\n\n";
+    }
+
+    // write bodies to main
+    out << bodies.str() << "\n";
+
+    // 8) write setup() and loop()
+    // find setup and loop instances
+    std::string setupInstance, loopInstance;
+    for (const auto &ni : nodes) {
+      if (ni.TypeID == "setup")
+        setupInstance = ni.InstanceID;
+      else if (ni.TypeID == "loop")
+        loopInstance = ni.InstanceID;
+    }
+
+    out << "// ---- Arduino entry points ----\n";
+    out << "void setup() {\n";
+    out << "    Serial.begin(115200);\n";
+    if (!setupInstance.empty()) {
+      out << "    // Transpiled setup node\n";
+      out << "    node_" << SanitizeIdentifier(setupInstance) << "();\n";
+    } else {
+      out << "    // No setup node found in graph\n";
+    }
+    out << "}\n\n";
+
+    out << "void loop() {\n";
+    if (!loopInstance.empty()) {
+      out << "    // Transpiled loop node (single call per loop)\n";
+      out << "    node_" << SanitizeIdentifier(loopInstance) << "();\n";
+    } else {
+      out << "    // No loop node found in graph - idle\n";
+      out << "    delay(1000);\n";
+    }
+    out << "}\n";
+
+    out.close();
+
+    std::cout << "Transpilation: main.cpp written to " << mainCpp << "\n";
+
+  } catch (const std::exception &e) {
+    std::cerr << "Transpilation exception: " << e.what() << "\n";
   }
 }
 

@@ -2,6 +2,8 @@
 #include "../../../../../../lib/vortex/main/include/vortex.h"
 #include "../../../../../../lib/vortex/main/include/vortex_internals.h"
 
+#include <set>
+
 #ifndef VIEWPORT_MAIN_SKETCH_APP_WINDOW_HPP
 #define VIEWPORT_MAIN_SKETCH_APP_WINDOW_HPP
 
@@ -224,7 +226,6 @@ public:
         }
         ofs << j.dump(4);
 
-        // ensure skeleton C++ file exists
         fs::path cppSkeleton = folder / (s.id + ".cpp");
         if (!fs::exists(cppSkeleton)) {
           std::ofstream sk(cppSkeleton);
@@ -315,7 +316,7 @@ public:
       // use NodeGraph's existing API by setting file and calling
       // DumpGraphToJsonFile()
       m_Graph.SetGraphFile(graphFile);
-      if (!m_Graph.DumpGraphToJsonFile()) {
+      if (!m_Graph.DumpGraphToJsonFile(&m_NodeCtx)) {
         std::cerr << "SaveMainNodeGraph: failed to dump graph to " << graphFile
                   << std::endl;
       }
@@ -670,11 +671,12 @@ public:
     }
   }
 
+  void Transpilation();
   void FetchMainNodeGraph() {
     try {
       std::string graphFile = srcMainSketchFile().string();
       m_Graph.SetGraphFile(graphFile);
-      bool ok = m_Graph.PopulateGraphFromJsonFile();
+      bool ok = m_Graph.PopulateGraphFromJsonFile(&m_NodeCtx);
       if (!ok) {
         std::cerr << "FetchMainNodeGraph: unable to load " << graphFile
                   << " (file missing or invalid). Creating empty graph."
@@ -687,7 +689,7 @@ public:
         if (out.is_open()) {
           out << j.dump(4);
           out.close();
-          m_Graph.PopulateGraphFromJsonFile();
+          m_Graph.PopulateGraphFromJsonFile(&m_NodeCtx);
         }
         return;
       }
@@ -713,6 +715,75 @@ public:
       std::cerr << "FetchMainNodeGraph exception: " << e.what() << std::endl;
     }
   }
+  void RegisterBoolVarNode() {
+    m_Graph.AddNodeDataType(
+        "bool_input",
+        // Serializer
+        [](const Cherry::NodeSystem::NodeInstance &node) -> json {
+          bool val = false;
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_boolean()) {
+                val = node.Datas["value"].get<bool>();
+              } else if (node.Datas["value"].is_string()) {
+                std::string s = node.Datas["value"].get<std::string>();
+                val = (s == "true" || s == "1");
+              }
+            }
+          } catch (...) {
+            val = false;
+          }
+          return {{"value", val}};
+        },
+        // Deserializer
+        [](Cherry::NodeSystem::NodeInstance &node, const json &j) {
+          bool val = false;
+          if (j.contains("value")) {
+            try {
+              if (j["value"].is_boolean()) {
+                val = j["value"].get<bool>();
+              } else if (j["value"].is_string()) {
+                std::string s = j["value"].get<std::string>();
+                val = (s == "true" || s == "1");
+              }
+            } catch (...) {
+              val = false;
+            }
+          }
+
+          if (!node.Datas.is_object())
+            node.Datas = json::object();
+
+          node.Datas["value"] = val;
+        });
+
+    // Render callback
+    m_Graph.SetRenderCallbackForNodeData(
+        "bool_input", [this](Cherry::NodeSystem::NodeInstance &node) {
+          bool val = false;
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_boolean())
+                val = node.Datas["value"].get<bool>();
+              else if (node.Datas["value"].is_string()) {
+                std::string s = node.Datas["value"].get<std::string>();
+                val = (s == "true" || s == "1");
+              }
+            }
+          } catch (...) {
+            val = false;
+          }
+
+          if (ImGui::Checkbox("##bool", &val)) {
+            if (!m_Graph.SetNodeData(node.InstanceID, "value", json(val))) {
+              if (!node.Datas.is_object())
+                node.Datas = json::object();
+              node.Datas["value"] = val;
+            }
+            m_NodeEngine.m_NodeGraph->MarkNodeAsChanged(node.InstanceID);
+          }
+        });
+  }
 
   void SpawnNode(const std::string &schema_id, float x, float y,
                  const std::string &link);
@@ -723,6 +794,112 @@ public:
 
   void DrawMainMenu();
   void DrawNodeExplorer();
+
+  // Transpilation :
+  // Helpers (place near top of file)
+  std::string SanitizeIdentifier(const std::string &s) {
+    std::string out;
+    for (char c : s) {
+      if (isalnum((unsigned char)c) || c == '_')
+        out.push_back(c);
+      else
+        out.push_back('_');
+    }
+    // avoid starting with digit
+    if (!out.empty() && isdigit((unsigned char)out.front()))
+      out = std::string("_") + out;
+    return out;
+  }
+
+  std::string GetCppTypeForPinType(const std::string &pinTypeId) {
+    static const std::unordered_map<std::string, std::string> base = {
+        {"bool", "bool"},     {"int", "int"},   {"float", "float"},
+        {"double", "double"}, {"char", "char"}, {"string", "std::string"},
+        {"exec", "void"}};
+
+    auto it = base.find(pinTypeId);
+    if (it != base.end())
+      return it->second;
+
+    if (!pinTypeId.empty())
+      return pinTypeId;
+    return "auto";
+  }
+
+  std::optional<SchemaInfo> FindSchemaInfoById(const std::string &id) {
+    for (const auto &s : g_SchemasCache)
+      if (s.id == id)
+        return s;
+    return std::nullopt;
+  }
+
+  std::string VarNameForPin(const Cherry::NodeSystem::NodeInstance &ni,
+                            const std::string &pinName) {
+    return SanitizeIdentifier(ni.InstanceID + "_" + pinName);
+  }
+  void PopulatePrimitiveBranch(const SchemaInfo &schema,
+                               const Cherry::NodeSystem::NodeInstance &ni,
+                               std::ostringstream &outBody,
+                               std::set<std::string> &declaredVars) {
+    // schema corresponds to "branch" primitive
+    // We expect input pin named "cond" (or schema.inputs containing type bool)
+    std::string instance = SanitizeIdentifier(ni.InstanceID);
+
+    // find condition pin name in schema inputs (fall back to "cond")
+    std::string condPinName = "cond";
+    for (const auto &p : schema.inputs) {
+      if (p.type == "bool" || p.id == "cond" || p.name == "Condition") {
+        condPinName = p.id.empty() ? p.name : p.id;
+        break;
+      }
+    }
+
+    // variable name for condition
+    std::string condVar = VarNameForPin(ni, condPinName);
+    if (declaredVars.find(condVar) == declaredVars.end()) {
+      // declare condition variable (bool) at top-level; caller will collect
+      // these
+      declaredVars.insert(condVar);
+    }
+
+    // Function for this node
+    outBody << "// --- branch node: " << ni.InstanceID
+            << " (schema: " << schema.id << ") ---\n";
+    outBody << "void node_" << instance << "() {\n";
+    outBody << "    // evaluate condition (assumed stored in variable: "
+            << condVar << ")\n";
+    outBody << "    if (" << condVar << ") {\n";
+
+    // follow true output connections
+    std::vector<std::string> trueTargets =
+        m_Graph.GetAllNodesLinkedToOutputInstanceID(ni.InstanceID, "true");
+    if (!trueTargets.empty()) {
+      // call first target (if multiple, call them in sequence)
+      for (auto &t : trueTargets) {
+        std::string tname = SanitizeIdentifier(t);
+        outBody << "        node_" << tname << "();\n";
+      }
+    } else {
+      outBody << "        // no target on True\n";
+    }
+
+    outBody << "    } else {\n";
+
+    // follow false output connections
+    std::vector<std::string> falseTargets =
+        m_Graph.GetAllNodesLinkedToOutputInstanceID(ni.InstanceID, "false");
+    if (!falseTargets.empty()) {
+      for (auto &t : falseTargets) {
+        std::string tname = SanitizeIdentifier(t);
+        outBody << "        node_" << tname << "();\n";
+      }
+    } else {
+      outBody << "        // no target on False\n";
+    }
+
+    outBody << "    }\n";
+    outBody << "}\n\n";
+  }
 
 private:
   VxContext *ctx;
