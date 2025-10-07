@@ -780,7 +780,6 @@ public:
                 node.Datas = json::object();
               node.Datas["value"] = val;
             }
-            m_NodeEngine.m_NodeGraph->MarkNodeAsChanged(node.InstanceID);
           }
         });
   }
