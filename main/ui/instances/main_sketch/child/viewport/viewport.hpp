@@ -784,6 +784,199 @@ public:
         });
   }
 
+  void RegisterIntVarNode() {
+    m_Graph.AddNodeDataType(
+        "int_input",
+        // Serializer
+        [](const Cherry::NodeSystem::NodeInstance &node) -> json {
+          int val = 0;
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_number_integer())
+                val = node.Datas["value"].get<int>();
+              else if (node.Datas["value"].is_string())
+                val = std::stoi(node.Datas["value"].get<std::string>());
+            }
+          } catch (...) {
+            val = 0;
+          }
+          return {{"value", val}};
+        },
+        // Deserializer
+        [](Cherry::NodeSystem::NodeInstance &node, const json &j) {
+          int val = 0;
+          try {
+            if (j.contains("value")) {
+              if (j["value"].is_number_integer())
+                val = j["value"].get<int>();
+              else if (j["value"].is_string())
+                val = std::stoi(j["value"].get<std::string>());
+            }
+          } catch (...) {
+            val = 0;
+          }
+
+          if (!node.Datas.is_object())
+            node.Datas = json::object();
+
+          node.Datas["value"] = val;
+        });
+
+    // Render callback
+    m_Graph.SetRenderCallbackForNodeData(
+        "int_input", [this](Cherry::NodeSystem::NodeInstance &node) {
+          int val = 0;
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_number_integer())
+                val = node.Datas["value"].get<int>();
+              else if (node.Datas["value"].is_string())
+                val = std::stoi(node.Datas["value"].get<std::string>());
+            }
+          } catch (...) {
+            val = 0;
+          }
+
+          if (ImGui::InputInt("##int", &val)) {
+            if (!m_Graph.SetNodeData(node.InstanceID, "value", json(val))) {
+              if (!node.Datas.is_object())
+                node.Datas = json::object();
+              node.Datas["value"] = val;
+            }
+          }
+        });
+  }
+  void RegisterFloatVarNode() {
+    m_Graph.AddNodeDataType(
+        "float_input",
+        // Serializer
+        [](const Cherry::NodeSystem::NodeInstance &node) -> json {
+          float val = 0.0f;
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_number_float())
+                val = node.Datas["value"].get<float>();
+              else if (node.Datas["value"].is_string())
+                val = std::stof(node.Datas["value"].get<std::string>());
+            }
+          } catch (...) {
+            val = 0.0f;
+          }
+          return {{"value", val}};
+        },
+        // Deserializer
+        [](Cherry::NodeSystem::NodeInstance &node, const json &j) {
+          float val = 0.0f;
+          try {
+            if (j.contains("value")) {
+              if (j["value"].is_number_float())
+                val = j["value"].get<float>();
+              else if (j["value"].is_string())
+                val = std::stof(j["value"].get<std::string>());
+            }
+          } catch (...) {
+            val = 0.0f;
+          }
+
+          if (!node.Datas.is_object())
+            node.Datas = json::object();
+
+          node.Datas["value"] = val;
+        });
+
+    // Render callback
+    m_Graph.SetRenderCallbackForNodeData(
+        "float_input", [this](Cherry::NodeSystem::NodeInstance &node) {
+          float val = 0.0f;
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_number_float())
+                val = node.Datas["value"].get<float>();
+              else if (node.Datas["value"].is_string())
+                val = std::stof(node.Datas["value"].get<std::string>());
+            }
+          } catch (...) {
+            val = 0.0f;
+          }
+          if (ImGui::InputFloat("##float", &val, 0.1f, 1.0f, "%.3f")) {
+            if (!m_Graph.SetNodeData(node.InstanceID, "value", json(val))) {
+              if (!node.Datas.is_object())
+                node.Datas = json::object();
+              node.Datas["value"] = val;
+            }
+          }
+        });
+  }
+  void RegisterCharVarNode() {
+    m_Graph.AddNodeDataType(
+        "char_input",
+        // Serializer
+        [](const Cherry::NodeSystem::NodeInstance &node) -> json {
+          char val = '\0';
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_string()) {
+                std::string s = node.Datas["value"].get<std::string>();
+                if (!s.empty())
+                  val = s[0];
+              }
+            }
+          } catch (...) {
+            val = '\0';
+          }
+          return {{"value", std::string(1, val)}};
+        },
+        // Deserializer
+        [](Cherry::NodeSystem::NodeInstance &node, const json &j) {
+          char val = '\0';
+          try {
+            if (j.contains("value")) {
+              if (j["value"].is_string()) {
+                std::string s = j["value"].get<std::string>();
+                if (!s.empty())
+                  val = s[0];
+              }
+            }
+          } catch (...) {
+            val = '\0';
+          }
+
+          if (!node.Datas.is_object())
+            node.Datas = json::object();
+
+          node.Datas["value"] = std::string(1, val);
+        });
+
+    // Render callback
+    m_Graph.SetRenderCallbackForNodeData(
+        "char_input", [this](Cherry::NodeSystem::NodeInstance &node) {
+          char val = '\0';
+          try {
+            if (node.Datas.is_object() && node.Datas.contains("value")) {
+              if (node.Datas["value"].is_string()) {
+                std::string s = node.Datas["value"].get<std::string>();
+                if (!s.empty())
+                  val = s[0];
+              }
+            }
+          } catch (...) {
+            val = '\0';
+          }
+
+          char buffer[2] = {val, '\0'};
+          ImGui::SetNextItemWidth(45.0f);
+          if (ImGui::InputText("##char", buffer, sizeof(buffer))) {
+            val = buffer[0];
+            if (!m_Graph.SetNodeData(node.InstanceID, "value",
+                                     json(std::string(1, val)))) {
+              if (!node.Datas.is_object())
+                node.Datas = json::object();
+              node.Datas["value"] = std::string(1, val);
+            }
+          }
+        });
+  }
+
   void SpawnNode(const std::string &schema_id, float x, float y,
                  const std::string &link);
 

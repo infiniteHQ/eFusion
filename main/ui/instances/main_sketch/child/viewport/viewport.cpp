@@ -36,6 +36,9 @@ ViewportMainSketchAppWindow::ViewportMainSketchAppWindow(
   FetchFunctions();
 
   RegisterBoolVarNode();
+  RegisterIntVarNode();
+  RegisterFloatVarNode();
+  RegisterCharVarNode();
 
   FetchMainNodeGraph();
 
@@ -86,6 +89,13 @@ void ViewportMainSketchAppWindow::PopulateMinimum() {
   ensureType("bool_input", "Boolean", "Boolean true/false", "#fc0339",
              "primitive",
              "bool"); // bool == fallback
+
+  ensureType("int_input", "Integer Input", "Integer constant input", "#ebd400",
+             "primitive", "int");
+  ensureType("float_input", "Float Input", "Float constant input", "#b8eb00",
+             "primitive", "float");
+  ensureType("char_input", "Char Input", "Char constant input", "#0380fc",
+             "primitive", "char");
 
   ensureType("variant", "Variant", "Generic fallback type", "#AAAAAA", "flow",
              "flow");
@@ -227,10 +237,25 @@ void ViewportMainSketchAppWindow::PopulateMinimum() {
                   "#CCCCCC", "#CCCCCC", "", "", "", "Convert float to int",
                   EmbeddedFusion::GetPath("resources/icons/if.png"));
 
-  ensurePrimitive("test", "", "",
+  ensurePrimitive("bool_variable", "", "",
                   {{"bool_input1", "bool_input1", "bool_input", nullptr}},
                   {{"bool1", "", "bool", nullptr}}, "#616363", "def", "def",
                   "#CCCCCC", "#CCCCCC", "", "", "", "Simple bool var");
+
+  ensurePrimitive("float_variable", "", "",
+                  {{"float_input1", "float_input1", "float_input", nullptr}},
+                  {{"float1", "", "float", nullptr}}, "#b8eb00", "def", "def",
+                  "#CCCCCC", "#CCCCCC", "", "", "", "Simple float var");
+
+  ensurePrimitive("int_variable", "", "",
+                  {{"int_input1", "int_input1", "int_input", nullptr}},
+                  {{"int1", "", "int", nullptr}}, "#ebd400", "def", "def",
+                  "#CCCCCC", "#CCCCCC", "", "", "", "Simple int var");
+
+  ensurePrimitive("char_variable", "", "",
+                  {{"char_input1", "char_input1", "char_input", nullptr}},
+                  {{"char1", "", "char", nullptr}}, "#0380fc", "def", "def",
+                  "#CCCCCC", "#CCCCCC", "", "", "", "Simple char var");
 }
 
 void ViewportMainSketchAppWindow::SpawnMinimal() {
@@ -323,7 +348,6 @@ void ViewportMainSketchAppWindow::SetupRenderCallback() {
 void ViewportMainSketchAppWindow::SpawnNode(const std::string &schema_id,
                                             float x, float y,
                                             const std::string &link) {
-  std::cout << "2a" << std::endl;
   Cherry::NodeSystem::NodeInstance ni;
   ni.TypeID = schema_id;
   ni.InstanceID =
@@ -332,26 +356,17 @@ void ViewportMainSketchAppWindow::SpawnNode(const std::string &schema_id,
   ni.Size = {120.f, 40.f};
 
   ni.Datas = "{}";
-  std::cout << "2112" << std::endl;
 
-  // ⚡ Ajoute le node à la graph
   m_Graph.AddNodeInstance(ni);
 
-  // Reconstruire et rafraîchir
-  std::cout << "2b1" << std::endl;
   m_NodeEngine.BuildNodes();
-  std::cout << "2b2" << std::endl;
   m_NodeEngine.RefreshNodeGraph();
-  std::cout << "2b3" << std::endl;
   m_NodeEngine.RefreshNodeGraphLinks();
-  std::cout << "2b4" << std::endl;
 
-  // Positionner le node
   Node *nodePtr = m_NodeEngine.FindNodeByInstanceID(ni.InstanceID);
   if (nodePtr) {
     ed::SetNodePosition(nodePtr->ID, ImVec2(x, y));
   }
-  std::cout << "2b" << std::endl;
 }
 
 void ViewportMainSketchAppWindow::Render() {
@@ -384,197 +399,176 @@ void ViewportMainSketchAppWindow::Render() {
 void ViewportMainSketchAppWindow::Transpilation() {
   namespace fs = std::filesystem;
 
-  try {
-    // 1) prepare paths
-    fs::path buildDir = fs::path(m_Path) / "transpilation" / "build";
-    fs::create_directories(buildDir);
+  fs::path buildDir = fs::path(m_Path) / "transpilation" / "build";
+  fs::create_directories(buildDir);
+  fs::path mainCpp = buildDir / "main.cpp";
 
-    fs::path mainCpp = buildDir / "main.cpp";
-    std::ofstream out(mainCpp);
-    if (!out.is_open()) {
-      std::cerr << "Transpilation: failed to open " << mainCpp << "\n";
-      return;
-    }
-
-    // 2) header includes
-    out << "// Auto-generated transpilation\n";
-    out << "#include <Arduino.h>\n";
-    out << "#include <string>\n";
-    out << "\n";
-
-    // 3) collect all node instances
-    auto &nodes = m_Graph.m_InstanciatedNodes;
-
-    // 4) collect variable declarations for data pins
-    std::set<std::string> declaredVars;           // var names
-    std::map<std::string, std::string> varToType; // var -> cpp type
-
-    // Helper lambda to register a pin variable
-    auto registerPinVar = [&](const Cherry::NodeSystem::NodeInstance &ni,
-                              const std::string &pinName,
-                              const std::string &pinTypeId) {
-      if (pinTypeId == "exec")
-        return; // no variable for exec
-      std::string var = VarNameForPin(ni, pinName);
-      std::string cppType = GetCppTypeForPinType(pinTypeId);
-      declaredVars.insert(var);
-      varToType[var] = cppType;
-    };
-
-    // Pre-pass: for each node instance, look up its schema in g_SchemasCache
-    // and register variables for inputs/outputs non-exec
-    for (const auto &ni : nodes) {
-      auto maybeSchema = FindSchemaInfoById(ni.TypeID);
-      if (!maybeSchema) {
-        // unknown schema: skip but keep remark
-        continue;
-      }
-      const SchemaInfo &schema = *maybeSchema;
-      // inputs
-      for (const auto &p : schema.inputs) {
-        registerPinVar(ni, p.id.empty() ? p.name : p.id, p.type);
-      }
-      // outputs
-      for (const auto &p : schema.outputs) {
-        registerPinVar(ni, p.id.empty() ? p.name : p.id, p.type);
-      }
-    }
-
-    // 5) write global declarations
-    out << "// Global pin variables (automatically declared)\n";
-    for (const auto &v : declaredVars) {
-      auto it = varToType.find(v);
-      std::string cppType = (it != varToType.end()) ? it->second : "auto";
-      out << cppType << " " << v << ";\n";
-    }
-    out << "\n";
-
-    // 6) forward prototypes for node functions
-    for (const auto &ni : nodes) {
-      std::string inst = SanitizeIdentifier(ni.InstanceID);
-      out << "void node_" << inst << "();\n";
-    }
-    out << "\n";
-
-    // 7) Build bodies for each node instance
-    std::ostringstream bodies; // accumulate bodies before output
-    for (const auto &ni : nodes) {
-      auto maybeSchema = FindSchemaInfoById(ni.TypeID);
-      if (!maybeSchema) {
-        // fallback: stub
-        std::string inst = SanitizeIdentifier(ni.InstanceID);
-        bodies << "// Stub for unknown schema: " << ni.TypeID << " ("
-               << ni.InstanceID << ")\n";
-        bodies << "void node_" << inst << "() {\n";
-        bodies << "    // Unknown node type '" << ni.TypeID
-               << "'. Implement or provide skeleton.\n";
-        bodies << "}\n\n";
-        continue;
-      }
-
-      const SchemaInfo &schema = *maybeSchema;
-
-      // special-case branch (we generate inline)
-      if (schema.id == "branch") {
-        PopulatePrimitiveBranch(schema, ni, bodies, declaredVars);
-        continue;
-      }
-
-      // Otherwise try to find an existing skeleton file named <id>.cpp
-      // in primitives/ or functions/ (we search both)
-      std::vector<fs::path> candidateDirs = {
-          fs::path(m_Path) / "primitives" / schema.id,
-          fs::path(m_Path) / "functions" / schema.id,
-          fs::path(m_Path) / "types" / schema.id,
-      };
-
-      bool usedExternalSkeleton = false;
-      for (auto &d : candidateDirs) {
-        fs::path skeleton = d / (schema.id + ".cpp");
-        if (fs::exists(skeleton)) {
-          // include skeleton contents as a helper function primitive_<id>
-          std::ifstream sk(skeleton);
-          if (sk.is_open()) {
-            std::string content((std::istreambuf_iterator<char>(sk)),
-                                std::istreambuf_iterator<char>());
-            // Option A: insert the skeleton content directly into bodies.
-            bodies << "// Included skeleton for primitive " << schema.id
-                   << " (from " << skeleton << ")\n";
-            bodies << content << "\n\n";
-            usedExternalSkeleton = true;
-            break;
-          }
-        }
-      }
-
-      // If external skeleton present, create a wrapper node function that calls
-      // it
-      std::string inst = SanitizeIdentifier(ni.InstanceID);
-      if (usedExternalSkeleton) {
-        bodies << "void node_" << inst << "() {\n";
-        bodies << "    // wrapper for primitive " << schema.id << "\n";
-        bodies << "    primitive_" << schema.id << "();\n";
-        bodies << "}\n\n";
-        continue;
-      }
-
-      // Otherwise produce a minimal stub that calls a primitive_<id>()
-      // placeholder
-      bodies << "// Primitive " << schema.id
-             << " (auto-generated stub for instance " << ni.InstanceID << ")\n";
-      bodies << "void primitive_" << schema.id << "() {\n";
-      bodies << "    // TODO: implement primitive '" << schema.id
-             << "' or provide a skeleton file in primitives/" << schema.id
-             << "/" << schema.id << ".cpp\n";
-      bodies << "}\n\n";
-
-      bodies << "void node_" << inst << "() {\n";
-      bodies << "    // calls primitive for " << schema.id << "\n";
-      bodies << "    primitive_" << schema.id << "();\n";
-      bodies << "}\n\n";
-    }
-
-    // write bodies to main
-    out << bodies.str() << "\n";
-
-    // 8) write setup() and loop()
-    // find setup and loop instances
-    std::string setupInstance, loopInstance;
-    for (const auto &ni : nodes) {
-      if (ni.TypeID == "setup")
-        setupInstance = ni.InstanceID;
-      else if (ni.TypeID == "loop")
-        loopInstance = ni.InstanceID;
-    }
-
-    out << "// ---- Arduino entry points ----\n";
-    out << "void setup() {\n";
-    out << "    Serial.begin(115200);\n";
-    if (!setupInstance.empty()) {
-      out << "    // Transpiled setup node\n";
-      out << "    node_" << SanitizeIdentifier(setupInstance) << "();\n";
-    } else {
-      out << "    // No setup node found in graph\n";
-    }
-    out << "}\n\n";
-
-    out << "void loop() {\n";
-    if (!loopInstance.empty()) {
-      out << "    // Transpiled loop node (single call per loop)\n";
-      out << "    node_" << SanitizeIdentifier(loopInstance) << "();\n";
-    } else {
-      out << "    // No loop node found in graph - idle\n";
-      out << "    delay(1000);\n";
-    }
-    out << "}\n";
-
-    out.close();
-
-    std::cout << "Transpilation: main.cpp written to " << mainCpp << "\n";
-
-  } catch (const std::exception &e) {
-    std::cerr << "Transpilation exception: " << e.what() << "\n";
+  std::ofstream out(mainCpp);
+  if (!out.is_open()) {
+    std::cerr << "[Transpilation] Error: unable to open " << mainCpp << "\n";
+    return;
   }
+
+  out << "// Auto-generated by EmbeddedFusion Transpiler\n";
+  out << "#include <Arduino.h>\n";
+  out << "#include <cmath>\n";
+  out << "#include <string>\n\n";
+
+  std::ostringstream globals;
+  std::ostringstream functions;
+  std::set<std::string> declaredVars;
+
+  auto Sanitize = [&](const std::string &s) {
+    std::string res = s;
+    for (auto &c : res)
+      if (!std::isalnum(c))
+        c = '_';
+    return res;
+  };
+
+  auto GetCppType = [&](const std::string &pinTypeID) -> std::string {
+    if (pinTypeID == "float")
+      return "float";
+    if (pinTypeID == "int")
+      return "int";
+    if (pinTypeID == "bool")
+      return "bool";
+    if (pinTypeID == "char")
+      return "char";
+    return "auto";
+  };
+
+  auto VarName = [&](const NodeSystem::NodeInstance &node,
+                     const std::string &pinName) {
+    return "var_" + Sanitize(node.InstanceID + "_" + pinName);
+  };
+
+  for (auto &instance : m_NodeEngine.m_NodeGraph->m_InstanciatedNodes) {
+    auto schemaOpt = FindSchemaInfoById(instance.TypeID);
+    if (!schemaOpt.has_value())
+      continue;
+    const auto &schema = schemaOpt.value();
+
+    for (auto &pin : schema.inputs) {
+      std::string name = VarName(instance, pin.id);
+      if (declaredVars.insert(name).second)
+        globals << GetCppType(pin.type) << " " << name << " = {};\n";
+    }
+
+    for (auto &pin : schema.outputs) {
+      std::string name = VarName(instance, pin.id);
+      if (declaredVars.insert(name).second)
+        globals << GetCppType(pin.type) << " " << name << " = {};\n";
+    }
+
+    if (instance.Datas.contains("value")) {
+      if (instance.Datas["value"].is_boolean()) {
+        globals << "bool " << VarName(instance, "value") << " = "
+                << (instance.Datas["value"].get<bool>() ? "true" : "false")
+                << ";\n";
+      } else if (instance.Datas["value"].is_number_float()) {
+        globals << "float " << VarName(instance, "value") << " = "
+                << instance.Datas["value"].get<float>() << "f;\n";
+      } else if (instance.Datas["value"].is_number_integer()) {
+        globals << "int " << VarName(instance, "value") << " = "
+                << instance.Datas["value"].get<int>() << ";\n";
+      }
+    }
+  }
+
+  out << "// === Variables ===\n" << globals.str() << "\n\n";
+
+  for (auto &instance : m_NodeEngine.m_NodeGraph->m_InstanciatedNodes) {
+    auto schemaOpt = FindSchemaInfoById(instance.TypeID);
+    if (!schemaOpt.has_value())
+      continue;
+    const auto &schema = schemaOpt.value();
+
+    std::string fn = "node_" + Sanitize(instance.InstanceID);
+    functions << "// --- Node " << instance.InstanceID << " (" << schema.id
+              << ") ---\n";
+    functions << "void " << fn << "() {\n";
+
+    for (auto &conn : m_NodeEngine.m_NodeGraph->m_Connections) {
+      if (conn.NodeInstanceIDB != instance.InstanceID)
+        continue;
+
+      auto dstSchemaOpt = FindSchemaInfoById(instance.TypeID);
+      if (!dstSchemaOpt.has_value())
+        continue;
+
+      bool isExecConn = false;
+      for (auto &pin : dstSchemaOpt->inputs)
+        if (pin.id == conn.PinIDB && pin.type == "exec")
+          isExecConn = true;
+      if (isExecConn)
+        continue;
+
+      auto *srcNode =
+          m_NodeEngine.m_NodeGraph->GetNodeInstance(conn.NodeInstanceIDA);
+      if (!srcNode)
+        continue;
+
+      std::string src = VarName(*srcNode, conn.PinIDA);
+      std::string dst = VarName(instance, conn.PinIDB);
+      functions << "    " << dst << " = " << src << ";\n";
+    }
+
+    if (schema.id == "bool_variable") {
+      std::string in = VarName(instance, "bool_input1");
+      std::string out = VarName(instance, "bool1");
+      functions << "    " << out << " = " << in << ";\n";
+    }
+
+    if (schema.id == "branch") {
+      std::string cond = VarName(instance, "cond");
+      functions << "    if (" << cond << ") {\n";
+      for (auto &conn : m_NodeEngine.m_NodeGraph->m_Connections) {
+        if (conn.NodeInstanceIDA == instance.InstanceID &&
+            conn.PinIDA == "true")
+          functions << "        node_" << Sanitize(conn.NodeInstanceIDB)
+                    << "();\n";
+      }
+      functions << "    } else {\n";
+      for (auto &conn : m_NodeEngine.m_NodeGraph->m_Connections) {
+        if (conn.NodeInstanceIDA == instance.InstanceID &&
+            conn.PinIDA == "false")
+          functions << "        node_" << Sanitize(conn.NodeInstanceIDB)
+                    << "();\n";
+      }
+      functions << "    }\n";
+    }
+
+    for (auto &conn : m_NodeEngine.m_NodeGraph->m_Connections) {
+      if (conn.NodeInstanceIDA != instance.InstanceID)
+        continue;
+
+      std::string pin = conn.PinIDA;
+      if (pin == "exec" || pin == "on_setup" || pin == "on_loop") {
+        functions << "    node_" << Sanitize(conn.NodeInstanceIDB) << "();\n";
+      }
+    }
+
+    functions << "}\n\n";
+  }
+
+  out << "// === Nodes functions ===\n" << functions.str() << "\n";
+
+  out << "void setup() {\n";
+  out << "    Serial.begin(115200);\n";
+  for (auto &instance : m_NodeEngine.m_NodeGraph->m_InstanciatedNodes)
+    if (instance.TypeID == "setup")
+      out << "    node_" << Sanitize(instance.InstanceID) << "();\n";
+  out << "}\n\n";
+
+  out << "void loop() {\n";
+  for (auto &instance : m_NodeEngine.m_NodeGraph->m_InstanciatedNodes)
+    if (instance.TypeID == "loop")
+      out << "    node_" << Sanitize(instance.InstanceID) << "();\n";
+  out << "    delay(1);\n";
+  out << "}\n";
+
+  out.close();
 }
 
 void ViewportMainSketchAppWindow::DrawMainMenu() {
