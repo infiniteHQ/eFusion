@@ -1,70 +1,40 @@
-#include "../ui/instances/main_sketch/main_sketch.hpp"
-#include <filesystem>
-#include <fstream>
-#include <main/include/vortex.h>
-#include <main/include/vortex_internals.h>
-#include <string>
-#include <ui/editor/app/src/editor.hpp>
 
-#ifndef SAMPLE_MODULE_HPP
-#define SAMPLE_MODULE_HPP
+#include <vxcore/include/vortex.h>
+#include <vxcore/include/vortex_internals.h>
+#include <vxgui/editor/main/editor.hpp>
 
-namespace EmbeddedFusion {
+#include "../ui/instances/text_editor/text_editor.hpp"
+
+#ifndef CODEEDIT_HPP
+#define CODEEDIT_HPP
+
+namespace CodeEdit {
 struct Context {
   std::shared_ptr<ModuleInterface> m_interface;
-  std::vector<std::shared_ptr<ModuleUI::MainSketchAppWindow>>
-      m_main_sketch_instances;
+  std::vector<std::shared_ptr<ModuleUI::TextEditorAppWindow>>
+      m_text_editor_instances;
 };
-} // namespace EmbeddedFusion
+} // namespace CodeEdit
 
-#ifndef EMBEDDED_FUSION_API
-#define EMBEDDED_FUSION_API
+#ifndef CODEEDIT_API
+#define CODEEDIT_API
 #endif
 
-#ifndef CEmbeddedFusion
-extern EMBEDDED_FUSION_API EmbeddedFusion::Context
-    *CEmbeddedFusion; // Current implicit context pointer
+#ifndef CCodeEdit
+extern CODEEDIT_API std::weak_ptr<CodeEdit::Context> CCodeEdit;
 #endif
 
-// The code API of the module.
-namespace EmbeddedFusion {
-// Main
-EMBEDDED_FUSION_API void CreateContext();
-EMBEDDED_FUSION_API void DestroyContext();
+namespace CodeEdit {
+// Context
+CODEEDIT_API std::shared_ptr<CodeEdit::Context> create_context();
+CODEEDIT_API void destroy_context(std::shared_ptr<CodeEdit::Context> ctx);
+CODEEDIT_API void set_current_context(std::shared_ptr<CodeEdit::Context> ctx);
+CODEEDIT_API std::shared_ptr<CodeEdit::Context> get_current_context();
 
-// Input/Output API
-// EMBEDDED_FUSION_API void I_OpenMainSketch();
-// Simply call OpenMainSketch with parameters
-// EMBEDDED_FUSION_API void I_OpenSketchFunction();
-// EMBEDDED_FUSION_API void I_OpenSketchEvent();
+CODEEDIT_API std::string get_path(const std::string &path);
 
-// API
-EMBEDDED_FUSION_API void OpenMainSketch(const std::string &path);
-// EMBEDDED_FUSION_API void OpenSketchFunction();
-// EMBEDDED_FUSION_API void OpenSketchEvent();
+CODEEDIT_API void StartTextEditorInstance(const std::string &path);
+CODEEDIT_API bool IsValidFile(const std::string &path);
+} // namespace CodeEdit
 
-// Content browser
-EMBEDDED_FUSION_API bool IsMainSketch(const std::string &path);
-EMBEDDED_FUSION_API void CreateMainSketch(const std::string &path);
-
-// EMBEDDED_FUSION_API void IsSketchFunction();
-// EMBEDDED_FUSION_API void CreateSketchFunction();
-
-// Project settings
-// EMBEDDED_FUSION_API void AddModuleSettingsToProjectSettings();
-// EMBEDDED_FUSION_API void GetModuleSettingsToProjectSettings();
-
-// UI
-// EMBEDDED_FUSION_API void SpawnMainSketchEditor();
-// EMBEDDED_FUSION_API void SpawnSketchFunctionEditor();
-
-EMBEDDED_FUSION_API std::string GetPath(const std::string &path);
-} // namespace EmbeddedFusion
-
-// The code of the module.
-namespace EmbeddedFusion {
-// Input/Output API
-// EMBEDDED_FUSION_API void TranspileSketchToCPP(const std::string path);
-} // namespace EmbeddedFusion
-
-#endif // SAMPLE_MODULE_HPP
+#endif // CODEEDIT_HPP

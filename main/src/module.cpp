@@ -1,45 +1,52 @@
 #include "module.hpp"
 
-void EmbeddedFusion::CreateContext() {
-  EmbeddedFusion::Context *ctx = VX_NEW(EmbeddedFusion::Context);
-  CEmbeddedFusion = ctx;
+// runtime pointer
+#ifndef CCodeEdit
+std::weak_ptr<CodeEdit::Context> CCodeEdit;
+#endif
+
+std::shared_ptr<CodeEdit::Context> CodeEdit::create_context() {
+  auto ctx = std::make_shared<CodeEdit::Context>();
+
+  set_current_context(ctx);
+
+  return ctx;
 }
 
-void EmbeddedFusion::DestroyContext() { VX_FREE(CEmbeddedFusion); }
-
-std::string EmbeddedFusion::GetPath(const std::string &path) {
-  return CEmbeddedFusion->m_interface->GetBinaryPath() + "/" + path;
+void CodeEdit::destroy_context(std::shared_ptr<CodeEdit::Context> ctx) {
+  set_current_context(nullptr);
 }
 
-bool EmbeddedFusion::IsMainSketch(const std::string &path) {
-  fs::path base(path);
+void CodeEdit::set_current_context(std::shared_ptr<CodeEdit::Context> ctx) {
+  CCodeEdit = ctx;
+}
 
-  if (!fs::is_regular_file(base / "main_sketch.json"))
+std::shared_ptr<CodeEdit::Context> CodeEdit::get_current_context() {
+  return CCodeEdit.lock();
+}
+
+std::string CodeEdit::get_path(const std::string &path) {
+  return get_current_context()->m_interface->cook_path(path);
+}
+
+bool CodeEdit::IsValidFile(const std::string &path) {
+  namespace fs = std::filesystem;
+
+  if (!fs::is_directory(path)) {
     return false;
+  }
 
-  return true;
+  for (const auto &entry : fs::directory_iterator(path)) {
+    if (entry.is_regular_file() &&
+        entry.path().filename() == "SampleConfig.txt") {
+      return true;
+    }
+  }
+
+  return false;
 }
 
-void EmbeddedFusion::CreateMainSketch(const std::string &path) {
-  fs::path base(path);
-  fs::path sketchRoot = base / "New Main Sketch";
-
-  fs::create_directories(sketchRoot / "src_nodal");
-  fs::create_directories(sketchRoot / "src/setup");
-  fs::create_directories(sketchRoot / "src/main");
-  fs::create_directories(sketchRoot / "configs");
-
-  auto createFile = [](const fs::path &p) {
-    std::ofstream ofs(p.string());
-    ofs << "{}";
-  };
-
-  createFile(sketchRoot / "src/setup/pin_setup.json");
-  createFile(sketchRoot / "src/main/main_sketch.json");
-  createFile(sketchRoot / "main_sketch.json");
-}
-
-void EmbeddedFusion::OpenMainSketch(const std::string &path) {
+void CodeEdit::StartTextEditorInstance(const std::string &path) {
   std::string filename = fs::path(path).filename().string();
 
   const size_t maxLen = 24;
@@ -49,8 +56,10 @@ void EmbeddedFusion::OpenMainSketch(const std::string &path) {
 
   std::string window_name =
       filename + "####" +
-      std::to_string(CEmbeddedFusion->m_main_sketch_instances.size());
-  std::shared_ptr<ModuleUI::MainSketchAppWindow> big_win =
-      ModuleUI::MainSketchAppWindow::Create(path, window_name);
-  Cherry::AddAppWindow(big_win->GetAppWindow());
+      std::to_string(
+          CodeEdit::get_current_context()->m_text_editor_instances.size());
+
+  auto inst = ModuleUI::TextEditorAppWindow::Create(path, window_name);
+  Cherry::AddAppWindow(inst->GetAppWindow());
+  CodeEdit::get_current_context()->m_text_editor_instances.push_back(inst);
 }
