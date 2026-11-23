@@ -27,13 +27,13 @@ public:
         eFusion::is_firmware_node_function, "efusion:firmware_node_funtion", "Node function", "#ffc800"));
 
     // Toolbars items
-    // Create new firmware node function
     this->add_toolbar_handler(ToolbarHandlerInterface(eFusion::create_hardware_profile, "Hardware Profile", "Create hardware profile", "Create new"));
     this->add_toolbar_handler(ToolbarHandlerInterface(eFusion::create_firmware_code_function, "Firmware Code Function", "Create firmware code function", "Create new"));
     this->add_toolbar_handler(ToolbarHandlerInterface(eFusion::create_firmware_node_function, "Firmware Node Function", "Create firmware node function", "Create new"));
 
-    // Create new firmware code function
-    // Create new hardware schema
+    // Content browser creator
+    this->add_content_browser_item_creator(ItemCreatorInterface([this](const std::string& path){eFusion::create_hardware_profile_in_path(path);
+  }, "f", "f", "f"));
 
 
 

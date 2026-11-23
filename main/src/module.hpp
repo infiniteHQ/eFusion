@@ -39,13 +39,21 @@ EFUSION_API bool is_firmware_code_function(const std::string &path);
 
 // Editors
 EFUSION_API void open_hardware_profile_editor(const std::string &path);
-EFUSION_API void open_firmware_code_editor(const std::string &path);
-EFUSION_API void open_firmware_node_editor(const std::string &path);
+EFUSION_API void open_firmware_code_function_editor(const std::string &path);
+EFUSION_API void open_firmware_node_function_editor(const std::string &path);
+EFUSION_API void open_firmware_schematic_editor(const std::string &path);
 
 // Toolbar actions
 EFUSION_API void create_hardware_profile();
 EFUSION_API void create_firmware_code_function();
 EFUSION_API void create_firmware_node_function();
+EFUSION_API void create_firmware_schematic();
+
+// Content browser creations 
+EFUSION_API void create_hardware_profile_in_path(const std::string &path);
+EFUSION_API void create_firmware_code_function_in_path(const std::string &path);
+EFUSION_API void create_firmware_node_function_in_path(const std::string &path);
+EFUSION_API void create_firmware_schematic_in_path(const std::string &path);
 
 EFUSION_API void StartTextEditorInstance(const std::string &path);
 } // namespace eFusion

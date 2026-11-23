@@ -103,10 +103,18 @@ bool eFusion::is_firmware_code_function(const std::string &path){
 
 // Editors
 void eFusion::open_hardware_profile_editor(const std::string &path){}
-void eFusion::open_firmware_code_editor(const std::string &path){}
-void eFusion::open_firmware_node_editor(const std::string &path){}
+void eFusion::open_firmware_schematic_editor(const std::string &path){}
+void eFusion::open_firmware_code_function_editor(const std::string &path){}
+void eFusion::open_firmware_node_function_editor(const std::string &path){}
 
 // Toolbar actions
 void eFusion::create_hardware_profile(){}
+void eFusion::create_firmware_schematic(){}
 void eFusion::create_firmware_code_function(){}
 void eFusion::create_firmware_node_function(){}
+
+// Content browser creations 
+void eFusion::create_hardware_profile_in_path(const std::string &path){}
+void eFusion::create_firmware_schematic_in_path(const std::string &path){}
+void eFusion::create_firmware_code_function_in_path(const std::string &path){}
+void eFusion::create_firmware_node_function_in_path(const std::string &path){}
