@@ -1,7 +1,7 @@
 {
     "type": "em",
     "group": "System Dev",
-    "name": "infinitehq.efusion.core",
+    "name": "infinitehq.efusion",
     "proper_name": "eFusion Core",
     "auto_exec": true,
     "version": "1.0.0",
