@@ -1,35 +1,35 @@
 #include "module.hpp"
 
 // runtime pointer
-#ifndef CCodeEdit
-std::weak_ptr<CodeEdit::Context> CCodeEdit;
+#ifndef CeFusion
+std::weak_ptr<eFusion::Context> CeFusion;
 #endif
 
-std::shared_ptr<CodeEdit::Context> CodeEdit::create_context() {
-  auto ctx = std::make_shared<CodeEdit::Context>();
+std::shared_ptr<eFusion::Context> eFusion::create_context() {
+  auto ctx = std::make_shared<eFusion::Context>();
 
   set_current_context(ctx);
 
   return ctx;
 }
 
-void CodeEdit::destroy_context(std::shared_ptr<CodeEdit::Context> ctx) {
+void eFusion::destroy_context(std::shared_ptr<eFusion::Context> ctx) {
   set_current_context(nullptr);
 }
 
-void CodeEdit::set_current_context(std::shared_ptr<CodeEdit::Context> ctx) {
-  CCodeEdit = ctx;
+void eFusion::set_current_context(std::shared_ptr<eFusion::Context> ctx) {
+  CeFusion = ctx;
 }
 
-std::shared_ptr<CodeEdit::Context> CodeEdit::get_current_context() {
-  return CCodeEdit.lock();
+std::shared_ptr<eFusion::Context> eFusion::get_current_context() {
+  return CeFusion.lock();
 }
 
-std::string CodeEdit::get_path(const std::string &path) {
+std::string eFusion::get_path(const std::string &path) {
   return get_current_context()->m_interface->cook_path(path);
 }
 
-bool CodeEdit::IsValidFile(const std::string &path) {
+bool eFusion::IsValidFile(const std::string &path) {
   namespace fs = std::filesystem;
 
   if (!fs::is_directory(path)) {
@@ -46,7 +46,7 @@ bool CodeEdit::IsValidFile(const std::string &path) {
   return false;
 }
 
-void CodeEdit::StartTextEditorInstance(const std::string &path) {
+void eFusion::StartTextEditorInstance(const std::string &path) {
   std::string filename = fs::path(path).filename().string();
 
   const size_t maxLen = 24;
@@ -57,9 +57,9 @@ void CodeEdit::StartTextEditorInstance(const std::string &path) {
   std::string window_name =
       filename + "####" +
       std::to_string(
-          CodeEdit::get_current_context()->m_text_editor_instances.size());
+          eFusion::get_current_context()->m_text_editor_instances.size());
 
   auto inst = ModuleUI::TextEditorAppWindow::Create(path, window_name);
   Cherry::AddAppWindow(inst->GetAppWindow());
-  CodeEdit::get_current_context()->m_text_editor_instances.push_back(inst);
+  eFusion::get_current_context()->m_text_editor_instances.push_back(inst);
 }

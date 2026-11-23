@@ -88,31 +88,31 @@ void TextEditorAppWindow::DefineWindowIcon() {
   switch (m_Type) {
   case FileTypes::File_CPP: {
     m_AppWindow->SetIcon(
-        CodeEdit::get_path("resources/icons/window_icons/cpp.png"));
+        eFusion::get_path("resources/icons/window_icons/cpp.png"));
     break;
   }
   case FileTypes::File_C: {
     m_AppWindow->SetIcon(
-        CodeEdit::get_path("resources/icons/window_icons/c.png"));
+        eFusion::get_path("resources/icons/window_icons/c.png"));
     break;
   }
   case FileTypes::File_HPP: {
     m_AppWindow->SetIcon(
-        CodeEdit::get_path("resources/icons/window_icons/hpp.png"));
+        eFusion::get_path("resources/icons/window_icons/hpp.png"));
     break;
   }
   case FileTypes::File_H: {
     m_AppWindow->SetIcon(
-        CodeEdit::get_path("resources/icons/window_icons/h.png"));
+        eFusion::get_path("resources/icons/window_icons/h.png"));
     break;
   }
   case FileTypes::File_LUA: {
     m_AppWindow->SetIcon(
-        CodeEdit::get_path("resources/icons/window_icons/lua.png"));
+        eFusion::get_path("resources/icons/window_icons/lua.png"));
     break;
   }
   default: {
-    m_AppWindow->SetIcon(CodeEdit::get_path("resources/icons/edit.png"));
+    m_AppWindow->SetIcon(eFusion::get_path("resources/icons/edit.png"));
     break;
   }
   }
@@ -191,7 +191,7 @@ void TextEditorAppWindow::RenderMenubar() {
   CherryNextComponent.SetProperty("size_x", "18");
   CherryNextComponent.SetProperty("size_y", "18");
   if (CherryKit::ButtonImage(
-          CodeEdit::get_path("/resources/icons/icon_save.png"))
+          eFusion::get_path("/resources/icons/icon_save.png"))
           .GetDataAs<bool>("isClicked")) {
     m_SavePending = true;
   }
@@ -205,7 +205,7 @@ void TextEditorAppWindow::RenderMenubar() {
   CherryNextComponent.SetProperty("size_x", "18");
   CherryNextComponent.SetProperty("size_y", "18");
   if (CherryKit::ButtonImage(
-          CodeEdit::get_path("/resources/icons/icon_refresh.png"))
+          eFusion::get_path("/resources/icons/icon_refresh.png"))
           .GetDataAs<bool>("isClicked")) {
     m_RefreshReady = true;
   }
@@ -216,7 +216,7 @@ void TextEditorAppWindow::RenderMenubar() {
   CherryNextComponent.SetProperty("padding_x", "10.0f");
   if (CherryKit::ButtonImageText(
           "Find",
-          CodeEdit::get_path("/resources/icons/icon_magnifying_glass.png"))
+          eFusion::get_path("/resources/icons/icon_magnifying_glass.png"))
           .GetDataAs<bool>("isClicked")) {
     m_FindPending = true;
   }
