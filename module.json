@@ -1,8 +1,8 @@
 {
     "type": "em",
-    "group": "System Dev",
+    "group": "Systems",
     "name": "infinitehq.efusion",
-    "proper_name": "eFusion Core",
+    "proper_name": "eFusion",
     "auto_exec": true,
     "version": "1.0.0",
     "author": "Infinite",

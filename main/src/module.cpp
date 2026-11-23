@@ -29,22 +29,6 @@ std::string eFusion::get_path(const std::string &path) {
   return get_current_context()->m_interface->cook_path(path);
 }
 
-bool eFusion::IsValidFile(const std::string &path) {
-  namespace fs = std::filesystem;
-
-  if (!fs::is_directory(path)) {
-    return false;
-  }
-
-  for (const auto &entry : fs::directory_iterator(path)) {
-    if (entry.is_regular_file() &&
-        entry.path().filename() == "SampleConfig.txt") {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 void eFusion::StartTextEditorInstance(const std::string &path) {
   std::string filename = fs::path(path).filename().string();
@@ -63,3 +47,66 @@ void eFusion::StartTextEditorInstance(const std::string &path) {
   Cherry::AddAppWindow(inst->GetAppWindow());
   eFusion::get_current_context()->m_text_editor_instances.push_back(inst);
 }
+
+
+// Utils
+bool eFusion::is_hardware_profile(const std::string &path){
+  namespace fs = std::filesystem;
+
+  if (!fs::is_directory(path)) {
+    return false;
+  }
+
+  for (const auto &entry : fs::directory_iterator(path)) {
+    if (entry.is_regular_file() &&
+        entry.path().filename() == "hardware_profile.json") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool eFusion::is_firmware_node_function(const std::string &path){
+  namespace fs = std::filesystem;
+
+  if (!fs::is_directory(path)) {
+    return false;
+  }
+
+  for (const auto &entry : fs::directory_iterator(path)) {
+    if (entry.is_regular_file() &&
+        entry.path().filename() == "firmware_node_function.json") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool eFusion::is_firmware_code_function(const std::string &path){
+  namespace fs = std::filesystem;
+
+  if (!fs::is_directory(path)) {
+    return false;
+  }
+
+  for (const auto &entry : fs::directory_iterator(path)) {
+    if (entry.is_regular_file() &&
+        entry.path().filename() == "firmware_code_function.json") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Editors
+void eFusion::open_hardware_profile_editor(const std::string &path){}
+void eFusion::open_firmware_code_editor(const std::string &path){}
+void eFusion::open_firmware_node_editor(const std::string &path){}
+
+// Toolbar actions
+void eFusion::create_hardware_profile(){}
+void eFusion::create_firmware_code_function(){}
+void eFusion::create_firmware_node_function(){}

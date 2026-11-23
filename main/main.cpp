@@ -10,33 +10,32 @@ public:
     auto m = ModuleInterface::get_editor_module_by_name(this->name());
     eFusion::get_current_context()->m_interface = m;
 
-    this->add_content_browser_item_handler(ItemHandlerInterface(
-        "file_cpp", eFusion::StartTextEditorInstance, "Edit",
-        "Edit this C++ file", eFusion::get_path("resources/icons/edit.png")));
-    this->add_content_browser_item_handler(ItemHandlerInterface(
-        "file_lua", eFusion::StartTextEditorInstance, "Edit",
-        "Edit this Lua file", eFusion::get_path("resources/icons/edit.png")));
-    this->add_content_browser_item_handler(ItemHandlerInterface(
-        "file_json", eFusion::StartTextEditorInstance, "Edit",
-        "Edit this JSON file", eFusion::get_path("resources/icons/edit.png")));
+    // Item handlers
     this->add_content_browser_item_handler(
-        ItemHandlerInterface("file_hpp", eFusion::StartTextEditorInstance,
-                             "Edit", "Edit this C++ header file",
-                             eFusion::get_path("resources/icons/edit.png")));
-    this->add_content_browser_item_handler(ItemHandlerInterface(
-        "file_c", eFusion::StartTextEditorInstance, "Edit", "Edit this C file",
-        eFusion::get_path("resources/icons/edit.png")));
-    this->add_content_browser_item_handler(
-        ItemHandlerInterface("file_h", eFusion::StartTextEditorInstance,
-                             "Edit", "Edit this C header file",
-                             eFusion::get_path("resources/icons/edit.png")));
-    this->add_content_browser_item_handler(
-        ItemHandlerInterface("file_python", eFusion::StartTextEditorInstance,
-                             "Edit", "Edit this Python file",
+        ItemHandlerInterface("efusion:hardware_profile", eFusion::open_hardware_profile_editor,
+                             "Open", "View or edit this hardware schema",
                              eFusion::get_path("resources/icons/edit.png")));
 
+    // Item identifiers
     this->add_content_browser_item_identifier(ItemIdentifierInterface(
-        eFusion::IsValidFile, "text_edit:superfile", "Super file", "#553333"));
+        eFusion::is_hardware_profile, "efusion:hardware_profile", "Hardware Profile", "#ff7300"));
+
+    this->add_content_browser_item_identifier(ItemIdentifierInterface(
+        eFusion::is_firmware_code_function, "efusion:firmware_code_function", "Code function", "#ffc800"));
+
+    this->add_content_browser_item_identifier(ItemIdentifierInterface(
+        eFusion::is_firmware_node_function, "efusion:firmware_node_funtion", "Node function", "#ffc800"));
+
+    // Toolbars items
+    // Create new firmware node function
+    this->add_toolbar_handler(ToolbarHandlerInterface(eFusion::create_hardware_profile, "Hardware Profile", "Create hardware profile", "Create new"));
+    this->add_toolbar_handler(ToolbarHandlerInterface(eFusion::create_firmware_code_function, "Firmware Code Function", "Create firmware code function", "Create new"));
+    this->add_toolbar_handler(ToolbarHandlerInterface(eFusion::create_firmware_node_function, "Firmware Node Function", "Create firmware node function", "Create new"));
+
+    // Create new firmware code function
+    // Create new hardware schema
+
+
 
     this->set_credits_file(eFusion::get_path("CREDITS"));
     this->add_documentation("Take the editor", "Edit a txt file",
