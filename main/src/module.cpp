@@ -30,25 +30,6 @@ std::string eFusion::get_path(const std::string &path) {
 }
 
 
-void eFusion::StartTextEditorInstance(const std::string &path) {
-  std::string filename = fs::path(path).filename().string();
-
-  const size_t maxLen = 24;
-  if (filename.size() > maxLen) {
-    filename = filename.substr(0, maxLen - 3) + "...";
-  }
-
-  std::string window_name =
-      filename + "####" +
-      std::to_string(
-          eFusion::get_current_context()->m_text_editor_instances.size());
-
-  auto inst = ModuleUI::TextEditorAppWindow::Create(path, window_name);
-  Cherry::AddAppWindow(inst->GetAppWindow());
-  eFusion::get_current_context()->m_text_editor_instances.push_back(inst);
-}
-
-
 // Utils
 bool eFusion::is_hardware_profile(const std::string &path){
   namespace fs = std::filesystem;
@@ -84,6 +65,23 @@ bool eFusion::is_firmware_node_function(const std::string &path){
   return false;
 }
 
+bool eFusion::is_firmware_schematic(const std::string &path){
+  namespace fs = std::filesystem;
+
+  if (!fs::is_directory(path)) {
+    return false;
+  }
+
+  for (const auto &entry : fs::directory_iterator(path)) {
+    if (entry.is_regular_file() &&
+        entry.path().filename() == "firmware_schematic.json") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool eFusion::is_firmware_code_function(const std::string &path){
   namespace fs = std::filesystem;
 
@@ -102,7 +100,14 @@ bool eFusion::is_firmware_code_function(const std::string &path){
 }
 
 // Editors
-void eFusion::open_hardware_profile_editor(const std::string &path){}
+void eFusion::open_hardware_profile_editor(const std::string &path){
+  std::string window_name = "Hardware profile";
+
+  auto inst = ModuleUI::HardwareProfileEditorAppWindow::Create(path, window_name);
+  Cherry::AddAppWindow(inst->GetAppWindow());
+  eFusion::get_current_context()->hardware_profile_editor_instances.push_back(inst);
+}
+
 void eFusion::open_firmware_schematic_editor(const std::string &path){}
 void eFusion::open_firmware_code_function_editor(const std::string &path){}
 void eFusion::open_firmware_node_function_editor(const std::string &path){}

@@ -3,7 +3,7 @@
 #include <vxcore/include/vortex_internals.h>
 #include <vxgui/editor/main/editor.hpp>
 
-#include "../ui/instances/text_editor/text_editor.hpp"
+#include "../ui/instances/hardware_profile_editor/hardware_profile_editor.hpp"
 
 #ifndef EFUSION_HPP
 #define EFUSION_HPP
@@ -11,8 +11,8 @@
 namespace eFusion {
 struct Context {
   std::shared_ptr<ModuleInterface> m_interface;
-  std::vector<std::shared_ptr<ModuleUI::TextEditorAppWindow>>
-      m_text_editor_instances;
+  std::vector<std::shared_ptr<ModuleUI::HardwareProfileEditorAppWindow>>
+      hardware_profile_editor_instances;
 };
 } // namespace eFusion
 
@@ -36,6 +36,7 @@ EFUSION_API std::string get_path(const std::string &path);
 EFUSION_API bool is_hardware_profile(const std::string &path);
 EFUSION_API bool is_firmware_node_function(const std::string &path);
 EFUSION_API bool is_firmware_code_function(const std::string &path);
+EFUSION_API bool is_firmware_schematic(const std::string &path);
 
 // Editors
 EFUSION_API void open_hardware_profile_editor(const std::string &path);
@@ -54,8 +55,6 @@ EFUSION_API void create_hardware_profile_in_path(const std::string &path);
 EFUSION_API void create_firmware_code_function_in_path(const std::string &path);
 EFUSION_API void create_firmware_node_function_in_path(const std::string &path);
 EFUSION_API void create_firmware_schematic_in_path(const std::string &path);
-
-EFUSION_API void StartTextEditorInstance(const std::string &path);
 } // namespace eFusion
 
 #endif // EFUSION_HPP

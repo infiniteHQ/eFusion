@@ -55,7 +55,7 @@ public:
     this->reset_module();
 
     // Clear windows
-    for (auto i : eFusion::get_current_context()->m_text_editor_instances) {
+    for (auto i : eFusion::get_current_context()->hardware_profile_editor_instances) {
       CherryApp.DeleteAppWindow(i->GetAppWindow());
     }
 
