@@ -117,6 +117,7 @@ void eFusion::create_hardware_profile(){}
 void eFusion::create_firmware_schematic(){}
 void eFusion::create_firmware_code_function(){}
 void eFusion::create_firmware_node_function(){}
+void eFusion::open_firmware_uploader(){}
 
 // Content browser creations 
 void eFusion::create_hardware_profile_in_path(const std::string &path){}

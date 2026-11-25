@@ -49,6 +49,7 @@ EFUSION_API void create_hardware_profile();
 EFUSION_API void create_firmware_code_function();
 EFUSION_API void create_firmware_node_function();
 EFUSION_API void create_firmware_schematic();
+EFUSION_API void open_firmware_uploader();
 
 // Content browser creations 
 EFUSION_API void create_hardware_profile_in_path(const std::string &path);
